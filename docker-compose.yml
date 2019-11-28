@@ -1,0 +1,74 @@
+version: '2'
+services:
+
+  front-envoy:
+    build:
+      context: apps
+      dockerfile: Dockerfile-frontenvoy
+    volumes:
+      - ./front-envoy.yaml:/etc/front-envoy.yaml
+    networks:
+      - envoymesh
+    expose:
+      - "80"
+      - "8001"
+    ports:
+      - "8000:80"
+      - "8001:8001"
+
+  service_a:
+    build:
+      context: apps
+      dockerfile: Dockerfile-service
+    volumes:
+      - ./service-envoy.yaml:/etc/service-envoy.yaml
+    networks:
+      envoymesh:
+        aliases:
+          - service_a
+    environment:
+      - SERVICE_NAME=A
+    expose:
+      - "80"
+
+  jaeger:
+    image: jaegertracing/all-in-one
+    environment:
+      - COLLECTOR_ZIPKIN_HTTP_PORT=9411
+    networks:
+      envoymesh:
+        aliases:
+          - jaeger
+    expose:
+      - "9411"
+      - "16686"
+    ports:
+      - "9411:9411"
+      - "16686:16686"
+
+  statsd_exporter:
+    image: prom/statsd-exporter:latest
+    ports:
+    - "9125:9125"
+    - "9102:9102"
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./config/prometheus/config.yaml:/etc/prometheus.yaml
+    ports:
+    - "9090:9090"
+    command: "--config.file=/etc/prometheus.yaml"
+
+  grafana:
+    image: grafana/grafana
+    volumes:
+      - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ./config/grafana/datasource.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
+      - ./config/grafana/dashboard.yaml:/etc/grafana/provisioning/dashboards/dashboard.yaml
+      - ./config/grafana/dashboard.json:/etc/grafana/provisioning/dashboards/dashboard.json
+    ports:
+    - "3000:3000"
+
+networks:
+  envoymesh: {}
