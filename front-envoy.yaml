@@ -1,3 +1,10 @@
+stats_sinks:
+  -
+    name: envoy.statsd
+    config:
+      tcp_cluster_name: statsd-exporter
+      prefix: front-envoy
+
 static_resources:
   listeners:
   - address:
@@ -42,16 +49,14 @@ static_resources:
     - socket_address:
         address: jaeger
         port_value: 9411
-  -
-    name: "statsd-exporter"
-    connect_timeout: "0.25s"
-    type: "strict_dns"
-    lb_policy: "ROUND_ROBIN"
+  - name: statsd-exporter
+    connect_timeout: 0.25s
+    type: strict_dns
+    lb_policy: round_robin
     hosts:
-      -
-        socket_address:
-          address: "statsd_exporter"
-          port_value: 9125
+    - socket_address:
+        address: statsd_exporter
+        port_value: 9125
 
 tracing:
   http:
@@ -68,9 +73,3 @@ admin:
       address: 0.0.0.0
       port_value: 8001
 
-stats_sinks:
-  -
-    name: "envoy.statsd"
-    config:
-      tcp_cluster_name: "statsd-exporter"
-      prefix: front-envoy

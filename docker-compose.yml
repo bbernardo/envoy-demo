@@ -49,16 +49,24 @@ services:
   statsd_exporter:
     image: prom/statsd-exporter:latest
     ports:
-    - "9125:9125"
-    - "9102:9102"
+      - "9125:9125"
+      - "9102:9102"
+    networks:
+      envoymesh:
+        aliases:
+          - statsd
 
   prometheus:
     image: prom/prometheus
     volumes:
       - ./config/prometheus/config.yaml:/etc/prometheus.yaml
     ports:
-    - "9090:9090"
+      - "9090:9090"
     command: "--config.file=/etc/prometheus.yaml"
+    networks:
+      envoymesh:
+        aliases:
+          - prometheus
 
   grafana:
     image: grafana/grafana
@@ -68,7 +76,11 @@ services:
       - ./config/grafana/dashboard.yaml:/etc/grafana/provisioning/dashboards/dashboard.yaml
       - ./config/grafana/dashboard.json:/etc/grafana/provisioning/dashboards/dashboard.json
     ports:
-    - "3000:3000"
+      - "3000:3000"
+    networks:
+      envoymesh:
+        aliases:
+          - grafana
 
 networks:
   envoymesh: {}
