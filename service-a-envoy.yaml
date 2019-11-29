@@ -4,7 +4,7 @@ admin:
   address: 
     socket_address: 
       address: "0.0.0.0"
-      port_value: 8001
+      port_value: 8081
 static_resources: 
   clusters: 
     - 
@@ -12,11 +12,10 @@ static_resources:
       hosts: 
         - 
           socket_address: 
-            address: service_a
-            port_value: 80
-      http2_protocol_options: {}
+            address: "127.0.0.1"
+            port_value: 8080
       lb_policy: round_robin
-      name: service_a
+      name: local_service
       type: strict_dns
     - 
       connect_timeout: 0.25s
@@ -25,7 +24,6 @@ static_resources:
           socket_address: 
             address: service_b
             port_value: 80
-      http2_protocol_options: {}
       lb_policy: round_robin
       name: service_b
       type: strict_dns
@@ -46,7 +44,7 @@ static_resources:
           socket_address: 
             address: statsd_exporter
             port_value: 9125
-      lb_policy: round_robin
+      lb_policy: ROUND_ROBIN
       name: statsd-exporter
       type: strict_dns
   listeners: 
@@ -66,29 +64,58 @@ static_resources:
                     config: {}
                     name: envoy.router
                 route_config: 
-                  name: local_route
+                  name: local_route_service
                   virtual_hosts: 
                     - 
                       domains: 
                         - "*"
-                      name: backend
+                      name: service_a
                       routes: 
                         - 
                           match: 
-                            regex: "/(service|trace)/a"
+                            prefix: /
                           route: 
-                            cluster: service_a
+                            cluster: local_service
+                stat_prefix: ingress_http
+                tracing: 
+                  operation_name: ingress
+              name: envoy.http_connection_manager
+    - 
+      address: 
+        socket_address: 
+          address: "0.0.0.0"
+          port_value: 9000
+      filter_chains: 
+        - 
+          filters: 
+            - 
+              config: 
+                codec_type: auto
+                http_filters: 
+                  - 
+                    config: {}
+                    name: envoy.router
+                route_config: 
+                  name: service_b
+                  virtual_hosts: 
+                    - 
+                      domains: 
+                        - "*"
+                      name: service_b
+                      routes: 
                         - 
                           match: 
-                            regex: "/(service|trace)/b"
+                            prefix: /trace
                           route: 
                             cluster: service_b
-                stat_prefix: ingress_http
+                stat_prefix: egress_http
+                tracing: 
+                  operation_name: egress
               name: envoy.http_connection_manager
 stats_sinks: 
   - 
     config: 
-      prefix: front-envoy
+      prefix: service_A
       tcp_cluster_name: statsd-exporter
     name: envoy.statsd
 tracing: 
